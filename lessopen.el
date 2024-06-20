@@ -1,4 +1,4 @@
-;;; lesspipe.el --- use lesspipe to view files in Emacs -*- lexical-binding: t; -*-
+;;; lessopen.el --- use lesspipe to view files in Emacs -*- lexical-binding: t; -*-
 ;;
 ;; Copyright (C) 2024 Caramel Hooves
 ;; SPDX-License-Identifier: GPL-3.0-only
@@ -19,12 +19,6 @@
 ;;
 ;;
 ;;; Code:
-
-(defun lessopen--call (lessopen input)
-  (let ((lessopen (s-split-words S))
-  (call-process "/home/lexa/config/lesspipe.sh" nil `(,buf t) t "/home/lexa/tegra194-p3668-0000-p3509-0000.dtb")
-
-  )
 
 (defun lessopen--open (input)
   (let ((lessopen (getenv "LESSOPEN"))
@@ -52,5 +46,13 @@
    (interactive "f")
    (lessopen--open filename))
 
-(provide 'lesspipe)
-;;; lesspipe.el ends here
+(defun find-file-with-lessopen-sync (filename)
+  "Open FILENAME in view-mode, pre-process the file content using LESSOPEN/LESSCLOSE. Waits for the full content of the file"
+   (interactive "f")
+   (lessopen--open filename)
+   (sleep-for 3)
+   (goto-char (point-min))
+   )
+
+(provide 'lessopen)
+;;; lessopen.el ends here
