@@ -1,0 +1,6 @@
+#+title: Use Lesspipe from emacs
+
+* Usage
+#+begin_src emacs-lisp
+(substitute-key-definition 'dired-view-file 'lessopen-dired-view-file dired-mode-map)
+#+end_src

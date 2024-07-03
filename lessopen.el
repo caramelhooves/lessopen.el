@@ -51,13 +51,29 @@
                       :command cmd)))
         (process-put process :done-cb done-cb))))))
 
-(defun find-file-with-lessopen (filename)
+(defun view-file-with-lessopen (filename)
   "Open FILENAME in view-mode, pre-process the file content using LESSOPEN/LESSCLOSE."
    (interactive "f")
    (let ((buf (generate-new-buffer (format "%s|less" filename))))
      (switch-to-buffer buf)
      (view-mode)
      (lessopen--open filename)))
+
+(defun lessopen-dired-view-file (prefix)
+  "In Dired, examine a file using lesspipe, returning to Dired when done.
+When file is a directory, show it in this buffer if it is
+inserted. Otherwise, display it in another buffer. If called with
+a PREFIX, open the file literally, without lessopen."
+  (interactive "P")
+  (let ((file (dired-get-file-for-visit)))
+    (if (file-directory-p file)
+	(or (and (cdr dired-subdir-alist)
+		 (dired-goto-subdir file))
+	    (dired file))
+      (if prefix
+          (view-file file)
+        (view-file-with-lessopen file)))))
+
 
 (provide 'lessopen)
 ;;; lessopen.el ends here

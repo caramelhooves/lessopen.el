@@ -1,6 +1,6 @@
 (Then "^I open \"\\([^\"]+\\)\" with lessopen$"
   (lambda (filename)
-    (find-file-with-lessopen filename)))
+    (view-file-with-lessopen filename)))
 
 (Then "^I wait pre-processing of \"\\([^\"]+\\)\"$"
   (lambda (filename)
