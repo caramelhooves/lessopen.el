@@ -24,7 +24,13 @@
 
 (defun lessopen--sentinel (process event)
   (let ((done-cb (process-get process :done-cb)))
-    (funcall done-cb event)))
+    (cond
+     ((string-match-p "\\(exited abnormally.*\\|finished\\)" event)
+      (when (= 0 (buffer-size (process-buffer process)))
+        (let ((inhibit-read-only t))
+          (insert-file-contents-literally (buffer-file-name (process-buffer process)))))
+      (funcall done-cb event))
+     (t (message "process %s changed status %s" process event)))))
 
 (defun lessopen--insert-into-buffer (process output)
   (with-current-buffer (process-buffer process)
@@ -38,7 +44,7 @@
 (defun lessopen--open (filename &optional done-cb)
   "Open FILENAME in view-mode. pre-process the file content using LESSOPEN/LESSCLOSE into the current buffer. Call DONE-CB when parsing is done."
   (let ((lessopen (getenv "LESSOPEN"))
-        (done-cb (or done-cb (lambda (&rest _args) (message "lessopen: pre-processing %s done" filename)))))
+        (done-cb (or done-cb (lambda (&rest _args) (message "lessopen: pre-processing %s done" (file-name-nondirectory filename))))))
     (cond
      ((string-match "|\\(.*\\)" lessopen)
       (let* ((cmd (list shell-file-name "-c" (format (match-string 1 lessopen) filename)))
@@ -54,8 +60,10 @@
 (defun view-file-with-lessopen (filename)
   "Open FILENAME in view-mode, pre-process the file content using LESSOPEN/LESSCLOSE."
    (interactive "f")
-   (let ((buf (generate-new-buffer (format "%s|less" filename))))
+   (let ((filename (file-truename filename))
+         (buf (generate-new-buffer filename)))
      (switch-to-buffer buf)
+     (set-visited-file-name filename t)
      (view-mode)
      (lessopen--open filename)))
 
