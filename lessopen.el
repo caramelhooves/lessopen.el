@@ -10,7 +10,7 @@
 ;; Version: 0.0.1
 ;; Keywords: convenience tools unix
 ;; Homepage: https://github.com/caramelhooves/teleport.el
-;; Package-Requires: ((emacs "24.3"))
+;; Package-Requires: ((emacs "25.1"))
 ;;
 ;; This file is not part of GNU Emacs.
 ;;
@@ -20,39 +20,44 @@
 ;;
 ;;; Code:
 
-(defun lessopen--open (input)
-  (let ((lessopen (getenv "LESSOPEN"))
-        (buf (generate-new-buffer (format "%s|less" input))))
+(require 'view)
 
-    (switch-to-buffer buf)
-    (with-current-buffer buf
-      (cond
-       ((string-match "||\\(.*\\)" lessopen)
-        (start-process-shell-command "lessopen" buf (format (match-string 1 lessopen) input)))
-       ((string-match "|\\(.*\\)" lessopen)
-        (start-process-shell-command "lessopen" buf (format (match-string 1 lessopen) input)))
-       (lessopen
-        (let ((output
-               (shell-command-to-string (format lessopen input))))
-          (if (string= "" output)
-              (insert-file-contents-literally input)
-            (insert-file-contents-literally output)))))
-      (if-let ((lessclose (getenv "LESSCLOSE")))
-          (start-process-shell-command "lessclose" buf lessclose))
-      (view-mode))))
+(defun lessopen--sentinel (process event)
+  (let ((done-cb (process-get process :done-cb)))
+    (funcall done-cb event)))
+
+(defun lessopen--insert-into-buffer (process output)
+  (with-current-buffer (process-buffer process)
+    (let ((inhibit-read-only t))
+      (save-excursion
+        (goto-char (process-mark process))
+        (insert output)
+        (set-marker (process-mark process) (point)))
+    )))
+
+(defun lessopen--open (filename &optional done-cb)
+  "Open FILENAME in view-mode. pre-process the file content using LESSOPEN/LESSCLOSE into the current buffer. Call DONE-CB when parsing is done."
+  (let ((lessopen (getenv "LESSOPEN"))
+        (done-cb (or done-cb (lambda (&rest _args) (message "lessopen: pre-processing %s done" filename)))))
+    (cond
+     ((string-match "|\\(.*\\)" lessopen)
+      (let* ((cmd (list shell-file-name "-c" (format (match-string 1 lessopen) filename)))
+             (process (make-process
+                      :name "lessopen"
+                      :buffer (current-buffer)
+                      :stderr nil
+                      :sentinel #'lessopen--sentinel
+                      :filter #'lessopen--insert-into-buffer
+                      :command cmd)))
+        (process-put process :done-cb done-cb))))))
 
 (defun find-file-with-lessopen (filename)
-  "Open FILENAME in view-mode, pre-process the file content using LESSOPEN/LESSCLOSE"
+  "Open FILENAME in view-mode, pre-process the file content using LESSOPEN/LESSCLOSE."
    (interactive "f")
-   (lessopen--open filename))
-
-(defun find-file-with-lessopen-sync (filename)
-  "Open FILENAME in view-mode, pre-process the file content using LESSOPEN/LESSCLOSE. Waits for the full content of the file"
-   (interactive "f")
-   (lessopen--open filename)
-   (sleep-for 3)
-   (goto-char (point-min))
-   )
+   (let ((buf (generate-new-buffer (format "%s|less" filename))))
+     (switch-to-buffer buf)
+     (view-mode)
+     (lessopen--open filename)))
 
 (provide 'lessopen)
 ;;; lessopen.el ends here
