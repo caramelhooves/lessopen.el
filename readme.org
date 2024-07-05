@@ -1,4 +1,4 @@
-#+title: Use Lesspipe from emacs
+#+title: View files in Emacs using [[https://github.com/wofr06/lesspipe][Lesspipe]]
 
 * Usage
 #+begin_src emacs-lisp
