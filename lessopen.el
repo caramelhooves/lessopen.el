@@ -29,6 +29,7 @@
       (when (= 0 (buffer-size (process-buffer process)))
         (let ((inhibit-read-only t))
           (insert-file-contents-literally (buffer-file-name (process-buffer process)))))
+      (with-current-buffer (process-buffer process) (set-buffer-modified-p nil))
       (funcall done-cb event))
      (t (message "process %s changed status %s" process event)))))
 
